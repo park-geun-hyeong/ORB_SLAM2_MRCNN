@@ -105,7 +105,7 @@ def calculate_traj(first_file, second_file):
 
 if __name__ == "__main__":
     first_file = "./TUM_RGB/groundtruth.txt"
-    dyna_file = "./TUM_RGB/CameraTrajectory_origin.txt"
+    dyna_file = "./TUM_RGB/CameraTrajectory_mrcnn.txt"
 
     first_list = associate.read_file_list(first_file)
     first_stamps = first_list.keys()
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plot_traj(ax,first_stamps,first_xyz_full.transpose().A,'-',"black","ground truth")
-    plot_traj(ax,time_dyna,traj_dyna.transpose().A,'-',"green","MRCNN ORB SLAM")
+    plot_traj(ax,time_dyna,traj_dyna.transpose().A,'-',"green","mrcnn ORB SLAM")
 
 
     ax.legend()
