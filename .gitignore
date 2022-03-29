@@ -22,9 +22,9 @@ build/
 *~
 lib/
 
-/Examples/MaskRcnn/pretrained/mrcnn
-/Examples/MaskRcnn/pretrained/orb
-/Examples/MaskRcnn/pretrained/test
-/Examples/MaskRcnn/pretrained/etc/image
-/Examples/MaskRcnn/pretrained/etc/txt
+Examples/MaskRcnn/pretrained/mrcnn
+Examples/MaskRcnn/pretrained/orb
+Examples/MaskRcnn/pretrained/test
+Examples/MaskRcnn/pretrained/etc/image
+Examples/MaskRcnn/pretrained/etc/txt
 
