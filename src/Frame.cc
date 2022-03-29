@@ -22,6 +22,7 @@
 #include "Converter.h"
 #include "ORBmatcher.h"
 #include <thread>
+int frame_num;
 namespace ORB_SLAM2
 {
 
@@ -244,14 +245,13 @@ void Frame::AssignFeaturesToGrid()
 }
 
 
-cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask,float confThreshold, float maskThreshold){
-
+cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float confThreshold, float maskThreshold){
     std::vector<std::string> classes; // classId --> className
     std::unordered_set<std::string> dynamicClasses; // name of dynamic classes
     cv::dnn::Net net; // mask-rcnn model
     
-    std::string strModelPath = "/home/park/ORB_SLAM/myslam2/ORB_SLAM2/Examples/MaskRcnn/pretrained/";
-    // define inference parameter                                                                                                        
+    // define inference parameter
+    std::string strModelPath = "/home/park/ORB_SLAM/myslam2/ORB_SLAM2/Examples/MaskRcnn/pretrained/";                                                                                                        
     std::string textGraph = strModelPath + "mask_rcnn_inception_v2_coco_2018_01_28.pbtxt";
     std::string modelWeights = strModelPath +  "mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb";
     std::string classesFile = strModelPath + "mscoco_labels.names";
@@ -331,8 +331,13 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask,float con
             }
         }
     }
-    
-    // cv::imwrite("/home/park/ORB_SLAM/myslam2/ORB_SLAM2/Examples/MaskRcnn/result/masking.png", dynamic_mask);
+
+    frame_num++;
+    string write_path ="/home/park/ORB_SLAM/myslam2/result/masking";
+    write_path += to_string(frame_num);
+    write_path += ".png";
+    cout << write_path << endl;
+    cv::imwrite(write_path, dynamic_mask);
     return dynamic_mask;
 }
 
