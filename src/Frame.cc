@@ -332,12 +332,12 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
         }
     }
 
-    frame_num++;
-    string write_path ="/home/park/ORB_SLAM/myslam2/result/masking";
-    write_path += to_string(frame_num);
-    write_path += ".png";
-    cout << write_path << endl;
-    cv::imwrite(write_path, dynamic_mask);
+    // frame_num++;
+    // string write_path ="/home/park/ORB_SLAM/myslam2/result/masking";
+    // write_path += to_string(frame_num);
+    // write_path += ".png";
+    // cout << write_path << endl;
+    // cv::imwrite(write_path, dynamic_mask);
     return dynamic_mask;
 }
 
