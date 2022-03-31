@@ -22,9 +22,6 @@
 #include <pangolin/pangolin.h>
 
 #include <mutex>
-
-int cnt;
-
 namespace ORB_SLAM2
 {
 
@@ -137,12 +134,7 @@ void Viewer::Run()
         pangolin::FinishFrame();
 
         cv::Mat im = mpFrameDrawer->DrawFrame();
-        cnt++;
-        string dst_path = "/home/park/ORB_SLAM/myslam2/orb_extract/";
-        dst_path += to_string(cnt);
-        dst_path += ".png";
-        cout << dst_path << endl;
-        cv::imwrite(dst_path, im);
+
         cv::imshow("ORB-SLAM2: Current Frame",im);
         cv::waitKey(mT);
 

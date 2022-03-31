@@ -25,7 +25,7 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include<mutex>
-
+int cnt;
 namespace ORB_SLAM2
 {
 
@@ -121,7 +121,6 @@ cv::Mat FrameDrawer::DrawFrame()
 
     cv::Mat imWithInfo;
     DrawTextInfo(im,state, imWithInfo);
-
     return imWithInfo;
 }
 
@@ -165,15 +164,43 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
 }
 
 void FrameDrawer::Update(Tracking *pTracker)
-{
+{   
+    cv::Mat draw_image;
+    draw_image = cv::Mat(480,640, CV_8UC3,cv::Scalar(255,255,255));
+    const float r = 5;
     unique_lock<mutex> lock(mMutex);
     pTracker->mImGray.copyTo(mIm);
+    pTracker->mImGray.copyTo(draw_image);
+    
     mvCurrentKeys=pTracker->mCurrentFrame.mvKeys;
     N = mvCurrentKeys.size();
+
+    ////////////////////////////////////////////////////////////////////////////
+    for(int i=0;i<N;i++)
+    {
+       
+        cv::Point2f pt1,pt2;
+        pt1.x=mvCurrentKeys[i].pt.x-r;
+        pt1.y=mvCurrentKeys[i].pt.y-r;
+        pt2.x=mvCurrentKeys[i].pt.x+r;
+        pt2.y=mvCurrentKeys[i].pt.y+r;
+
+        cv::rectangle(draw_image,pt1,pt2,cv::Scalar(255,255,255));
+        cv::circle(draw_image,mvCurrentKeys[i].pt,2,cv::Scalar(255,255,255),-1);        
+    }
+
+    cnt++;
+    string dst_path ="/home/park/ORB_SLAM/myslam2/orb_extract/orb";
+    dst_path += to_string(cnt);
+    dst_path += ".png";
+    cout << dst_path << endl;
+    cv::imwrite(dst_path, draw_image);
+    /////////////////////////////////////////////////////////////////////////
+
+
     mvbVO = vector<bool>(N,false);
     mvbMap = vector<bool>(N,false);
     mbOnlyTracking = pTracker->mbOnlyTracking;
-
 
     if(pTracker->mLastProcessedState==Tracking::NOT_INITIALIZED)
     {
