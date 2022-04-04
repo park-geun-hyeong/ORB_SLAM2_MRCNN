@@ -118,7 +118,7 @@ cv::Mat FrameDrawer::DrawFrame()
             }
         }
     }
-
+    
     cv::Mat imWithInfo;
     DrawTextInfo(im,state, imWithInfo);
     return imWithInfo;
@@ -166,70 +166,90 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
 void FrameDrawer::Update(Tracking *pTracker)
 {   
     cv::Mat draw_image,draw_img_bgr;
-    draw_image = cv::Mat(480,640, CV_8UC3, cv::Scalar(255,255,255));
+    // draw_image = cv::Mat(480,640, CV_8UC3, cv::Scalar(255,255,255));
     const float r = 5;
     unique_lock<mutex> lock(mMutex);
     pTracker->mImGray.copyTo(mIm);
     pTracker->mImGray.copyTo(draw_image);
     cv::cvtColor(draw_image, draw_img_bgr, cv::COLOR_GRAY2BGR);
 
-    cout<< "draw_image size: "<<draw_img_bgr.size() << " mat dims: "<< draw_img_bgr.dims <<endl;
+    //cout<< "draw_image size: "<<draw_img_bgr.size() << " mat dims: "<< draw_img_bgr.dims <<endl;
 
     mvCurrentKeys=pTracker->mCurrentFrame.mvKeys;
     N = mvCurrentKeys.size();
 
-
-    // keypoint drawing //
-    ////////////////////////////////////////////////////////////////////////////
-    for(int i=0;i<N;i++)
-    {
+    //keypoint drawing 
+    //////////////////////////////////////////////////////////////////////////
+    // for(int i=0;i<N;i++)
+    // {
        
-        cv::Point2f pt1,pt2;
-        pt1.x=mvCurrentKeys[i].pt.x-r;
-        pt1.y=mvCurrentKeys[i].pt.y-r;
-        pt2.x=mvCurrentKeys[i].pt.x+r;
-        pt2.y=mvCurrentKeys[i].pt.y+r;
+    //     cv::Point2f pt1,pt2;
+    //     pt1.x=mvCurrentKeys[i].pt.x-r;
+    //     pt1.y=mvCurrentKeys[i].pt.y-r;
+    //     pt2.x=mvCurrentKeys[i].pt.x+r;
+    //     pt2.y=mvCurrentKeys[i].pt.y+r;
 
-        cv::rectangle(draw_img_bgr,pt1,pt2,cv::Scalar(0,255,0));
-        cv::circle(draw_img_bgr,mvCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);        
-    }
+    //     cv::rectangle(draw_img_bgr,pt1,pt2,cv::Scalar(0,255,0));
+    //     cv::circle(draw_img_bgr,mvCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);        
+    // }
 
-    cnt++;
-    string dst_path ="/home/park/ORB_SLAM/myslam2/orb_extract/orb";
-    dst_path += to_string(cnt);
-    dst_path += ".png";
-    cout << dst_path << endl;
-    cv::imwrite(dst_path, draw_img_bgr);
-    /////////////////////////////////////////////////////////////////////////
-
+    // cnt++;
+    // string dst_path ="/home/park/ORB_SLAM/myslam2/kitti00_orb/orb";
+    // dst_path += to_string(cnt);
+    // dst_path += ".png";
+    // cout << dst_path << endl;
+    // cv::imwrite(dst_path, draw_img_bgr);
+    ///////////////////////////////////////////////////////////////////////
 
     mvbVO = vector<bool>(N,false);
     mvbMap = vector<bool>(N,false);
     mbOnlyTracking = pTracker->mbOnlyTracking;
+    
+    cnt++;
+    string dst_path ="/home/park/ORB_SLAM/myslam2/kitti08_orb/orb";
+    dst_path += to_string(cnt);
+    dst_path += ".png";
+    cout << dst_path << endl;
 
     if(pTracker->mLastProcessedState==Tracking::NOT_INITIALIZED)
     {
         mvIniKeys=pTracker->mInitialFrame.mvKeys;
         mvIniMatches=pTracker->mvIniMatches;
+        cv::imwrite(dst_path, draw_img_bgr); 
     }
     else if(pTracker->mLastProcessedState==Tracking::OK)
     {
         for(int i=0;i<N;i++)
         {
             MapPoint* pMP = pTracker->mCurrentFrame.mvpMapPoints[i];
+            cv::Point2f pt1,pt2;
+            pt1.x=mvCurrentKeys[i].pt.x-r;
+            pt1.y=mvCurrentKeys[i].pt.y-r;
+            pt2.x=mvCurrentKeys[i].pt.x+r;
+            pt2.y=mvCurrentKeys[i].pt.y+r;
+
+
             if(pMP)
             {
                 if(!pTracker->mCurrentFrame.mvbOutlier[i])
                 {
-                    if(pMP->Observations()>0)
+                    if(pMP->Observations()>0){
                         mvbMap[i]=true;
-                    else
+                        cv::rectangle(draw_img_bgr,pt1,pt2,cv::Scalar(0,255,0));
+                        cv::circle(draw_img_bgr,mvCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);}
+                    else{
                         mvbVO[i]=true;
+                        cv::rectangle(draw_img_bgr,pt1,pt2,cv::Scalar(255,0,0));
+                        cv::circle(draw_img_bgr,mvCurrentKeys[i].pt,2,cv::Scalar(255,0,0),-1);}
                 }
             }
         }
+
+    cv::imwrite(dst_path, draw_img_bgr);   
     }
+
     mState=static_cast<int>(pTracker->mLastProcessedState);
+   
 }
 
 } //namespace ORB_SLAM
