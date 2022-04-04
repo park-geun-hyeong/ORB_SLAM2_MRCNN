@@ -4,11 +4,14 @@ import sys
 import numpy as np
 
 if __name__ == "__main__":
-    path = '/home/park/ORB_SLAM/myslam2/result/'
-    dst = '/home/park/ORB_SLAM/myslam2/masking.mp4'   
+    path = '/home/park/ORB_SLAM/myslam2/kitti08_mask/'
+    dst = '/home/park/ORB_SLAM/myslam2/kitti08_mask.mp4'   
 
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-    out = cv2.VideoWriter(dst, fourcc, 25.0, (480,640))
+    sample = cv2.imread(path + os.listdir(path)[0])
+    height, width, depth = sample.shape
+
+    out = cv2.VideoWriter(dst, fourcc, 10.0, (width,height))
     if not out.isOpened():
         print('video writer error')
         sys.exit()
@@ -18,6 +21,7 @@ if __name__ == "__main__":
         img_path = path + "masking{}.png".format(i)
         img = cv2.imread(img_path,cv2.IMREAD_GRAYSCALE)
         img = cv2.cvtColor(img , cv2.COLOR_GRAY2BGR)
+        #img = cv2.imread(img_path)
 
         print(img_path, type(img), img.shape)
         img_array.append(img)
