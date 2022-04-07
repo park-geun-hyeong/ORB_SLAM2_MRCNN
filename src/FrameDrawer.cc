@@ -206,7 +206,7 @@ void FrameDrawer::Update(Tracking *pTracker)
     mbOnlyTracking = pTracker->mbOnlyTracking;
     
     cnt++;
-    string dst_path ="/home/park/ORB_SLAM/myslam2/kitti08_orb/orb";
+    string dst_path ="/home/park/ORB_SLAM/myslam2/kitti08_padding_orb/orb";
     dst_path += to_string(cnt);
     dst_path += ".png";
     cout << dst_path << endl;

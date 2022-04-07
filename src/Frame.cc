@@ -311,17 +311,21 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
             int right = static_cast<int>(im.cols * outDetections.at<float>(i, 5));
             int bottom = static_cast<int>(im.rows * outDetections.at<float>(i, 6));
 
-            left = std::max(0, std::min(left, im.cols - 1));
-            top = std::max(0, std::min(top, im.rows - 1));
-            right = std::max(0, std::min(right, im.cols - 1));
-            bottom = std::max(0, std::min(bottom, im.rows - 1));
+            int padding_size = 12; // padding_size == 0(original mask size)
+            left = std::max(0, std::min(left-padding_size, im.cols - 1));
+            top = std::max(0, std::min(top-padding_size, im.rows - 1));
+            right = std::max(0, std::min(right+padding_size, im.cols - 1));
+            bottom = std::max(0, std::min(bottom+padding_size, im.rows - 1));
+            
             cv::Rect box = cv::Rect(left, top, right - left + 1, bottom - top + 1);
             
             // Extract the mask for the object
             cv::Mat objectMask(outMasks.size[2], outMasks.size[3], CV_32F, outMasks.ptr<float>(i, classId));
+            
             // Resize the mask, threshold, color and apply it on the image
+            
             cv::resize(objectMask, objectMask, cv::Size(box.width, box.height));
-            // threshold mask into binary 255/0 mask
+            // threshold mask into binary 255/0 
             cv::Mat mask = (objectMask > maskThreshold);
             mask.convertTo(mask, CV_8U);
 
@@ -332,8 +336,10 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
         }
     }
 
+    dynamic_mask;
+
     frame_num++;
-    string write_path ="/home/park/ORB_SLAM/myslam2/kitti08_mask/masking";
+    string write_path ="/home/park/ORB_SLAM/myslam2/kitti08_padding_mask/masking";
     write_path += to_string(frame_num);
     write_path += ".png";
     cout << write_path << endl;
