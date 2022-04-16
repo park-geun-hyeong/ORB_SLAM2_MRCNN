@@ -1,9 +1,18 @@
 # ORB-SLAM2
 
 ## ORB-SLAM2 + Mask-RCNN
-- Instance segmentation using Mask-RCNN
-- Make Binary masks for dynamic instance 
-- Extract ORB feature using mask(only static environment)
+### Summary
+
+- ORB SLAM2의 Localization 성능을 높히기 위한 방법 연구
+- Mask RCNN으로 instance segmentation을 적용하여 동적인 객체들의 masking 정보(binary)를 추출한뒤, Masking을 활용하여 정적인 환경에서만 특징점 추출이 이루어지도록 하기
+- ros를 활용하여 rosbag파일을 입력받을 경우, maskrcnn node를 정의하여, masking 정보를 추출해주기
+- png 파일을 입력받을 경우, Masking정보 추출해주는 cc파일 정의하여  main thred에 포함시켜 주기
+- 나의 경우엔 coco_pretrained_inception OpenCV inference 활용하여 instance segmentation진행해 주었음.
+
+### Environment
+
+- ubuntu 18.04
+- OpenCV 3.4.5(for OpenCV dnn module)
 
 **Authors:** [Raul Mur-Artal](http://webdiis.unizar.es/~raulmur/), [Juan D. Tardos](http://webdiis.unizar.es/~jdtardos/), [J. M. M. Montiel](http://webdiis.unizar.es/~josemari/) and [Dorian Galvez-Lopez](http://doriangalvez.com/) ([DBoW2](https://github.com/dorian3d/DBoW2))
 
