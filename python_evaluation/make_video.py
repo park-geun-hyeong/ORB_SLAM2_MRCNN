@@ -4,8 +4,8 @@ import sys
 import numpy as np
 
 if __name__ == "__main__":
-    path = '/home/park/ORB_SLAM/myslam2/kitti08_mask/'
-    dst = '/home/park/ORB_SLAM/myslam2/kitti08_mask.mp4'   
+    path = '/home/park/ORB_SLAM/myslam2/kitti08_padding_orb/'
+    dst = '/home/park/ORB_SLAM/myslam2/kitti08_padding_orb.mp4'   
 
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
     sample = cv2.imread(path + os.listdir(path)[0])
@@ -18,10 +18,10 @@ if __name__ == "__main__":
 
     img_array = []
     for i in range(1, len(os.listdir(path)) + 1):
-        img_path = path + "masking{}.png".format(i)
-        img = cv2.imread(img_path,cv2.IMREAD_GRAYSCALE)
-        img = cv2.cvtColor(img , cv2.COLOR_GRAY2BGR)
-        #img = cv2.imread(img_path)
+        img_path = path + "orb{}.png".format(i)
+        #img = cv2.imread(img_path,cv2.IMREAD_GRAYSCALE)
+        #img = cv2.cvtColor(img , cv2.COLOR_GRAY2BGR)
+        img = cv2.imread(img_path)
 
         print(img_path, type(img), img.shape)
         img_array.append(img)

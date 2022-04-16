@@ -95,13 +95,13 @@ def align(model,data):
 
 if __name__ == '__main__':
     #Path to the times.txt in KITTI dataset
-    ground_time = np.loadtxt('kitti08/kitti08_times.txt')
+    ground_time = np.loadtxt('./kitti07/kitti07_times.txt')
 
     #Path to the KeyFrameTrajectory.txt file
-    res_time = np.loadtxt('kitti08/KeyFrameTrajectory_origin.txt')
+    res_time = np.loadtxt('./kitti07/KeyFrameTrajectory_07_origin.txt')
 
     #Path to the ground truth file
-    ground_data = np.loadtxt('kitti08/kitti08_gt.txt')
+    ground_data = np.loadtxt('./kitti07/kitti07_gt.txt')
     data= gen_data(ground_time, res_time, ground_data)
     ground_points = np.asarray(get_coo(data)) # ground truth
     re_points = np.asarray(get_points(res_time)) # camera trajectory
@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
  
     plt.scatter(ground_points[0], ground_points[2], s=0.1,label = "Ground Truth")
-    plt.scatter(list(re_fpoints[0]), list(re_fpoints[2]), s=0.1, c='red',label = "MRCNN SLAM")
+    plt.scatter(list(re_fpoints[0]), list(re_fpoints[2]), s=0.1, c='red',label = "origin SLAM")
     plt.title("MRCNN SLAM")
     plt.legend()
 

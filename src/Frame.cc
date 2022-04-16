@@ -339,7 +339,7 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
     dynamic_mask;
 
     frame_num++;
-    string write_path ="/home/park/ORB_SLAM/myslam2/kitti08_padding_mask/masking";
+    string write_path ="/home/park/ORB_SLAM/myslam2/kitti03_mask/masking";
     write_path += to_string(frame_num);
     write_path += ".png";
     cout << write_path << endl;
