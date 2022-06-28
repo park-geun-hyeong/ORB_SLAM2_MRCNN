@@ -2,14 +2,12 @@
 
 ## ORB-SLAM2 + Mask-RCNN
 ### Summary
-[Notion](https://prairie-mink-e3f.notion.site/ORB-SLAM-Mask-RCNN-3fd292703350458885f6d058b179db0a)
-[Youtube](https://www.youtube.com/watch?v=1Co2f7anQjw&list=PL2hpFuZ5IouTEGuBLW6elAexu2mA6-HQh)
 
 - ORB SLAM2의 Localization 성능을 높히기 위한 방법 연구
 - Mask RCNN 기반의 instance segmentation을 적용하여 동적인 객체들을 마스킹해주고, 정적인 환경에서만 특징점 추출이 이루어지도록 수정
-- ros를 활용하여 rosbag파일을 입력받을 경우, maskrcnn node를 정의하여, masking 정보를 추출해주기
-- png 파일을 입력받을 경우, Masking정보 추출해주는 cc파일 정의하여  main thred에 포함시켜 주기
-- 나의 경우엔 coco_pretrained_inception OpenCV inference 활용하여 instance segmentation진행해 주었음.
+- coco_pretrained_inception OpenCV inference 활용하여 instance segmentation 적용.
+- 전체적인 수정 과정과 결과를 확인하고 싶다면 [Notion](https://prairie-mink-e3f.notion.site/ORB-SLAM-Mask-RCNN-3fd292703350458885f6d058b179db0a)을 확인해주세요.
+- 마스킹과정과 특징점 추출과정을 영상으로 확인하고 싶다면 [Youtube](https://www.youtube.com/watch?v=1Co2f7anQjw&list=PL2hpFuZ5IouTEGuBLW6elAexu2mA6-HQh)를 확인해주세요.
 
 ### Environment
 
