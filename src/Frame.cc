@@ -31,6 +31,12 @@ bool Frame::mbInitialComputations=true;
 float Frame::cx, Frame::cy, Frame::fx, Frame::fy, Frame::invfx, Frame::invfy;
 float Frame::mnMinX, Frame::mnMinY, Frame::mnMaxX, Frame::mnMaxY;
 float Frame::mfGridElementWidthInv, Frame::mfGridElementHeightInv;
+int cnt = 0;
+cv::Mat prvs;
+cv::Mat flows;
+cv::UMat flowMat;
+const float t_interval = 0.1;
+std::vector<float> velocity;
 
 Frame::Frame()
 {}
@@ -188,7 +194,14 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
-    ExtractORB(0,imGray);
+    if(cnt == 0)
+    {
+        prvs = imGray;
+    }
+    cv::Mat imTh = OpticalFlow(imGray, prvs, cnt);
+    ExtractORB_flow(0,imGray, imTh);
+    cnt+=1;
+    prvs = imGray;
 
     N = mvKeys.size();
 
@@ -244,18 +257,55 @@ void Frame::AssignFeaturesToGrid()
     }
 }
 
+cv::Mat Frame::OpticalFlow(const cv::Mat &im, cv::Mat &prev, int cnt)
+{   
+    calcOpticalFlowFarneback(prev, im, flowMat, 0.5, 3, 15, 3, 5, 1.2, 0);
+    flowMat.copyTo(flows);
+    cv::Mat VelMat = cv::Mat::zeros(im.rows, im.cols, CV_32FC1);
+    std::cout << "\n========== [" << cnt << "] ==========" << std::endl;
+    for(int row = 0 ; row<flows.rows ; row++)
+    {
+        cv::Point2f* pointer_row = flows.ptr<cv::Point2f>(row);
+        float* dest_row = VelMat.ptr<float>(row);
+        for(int col = 0 ; col<flows.cols; col++)
+        {
+            cv::Point2f f = pointer_row[col];
+            float p_vel_y = -f.y/t_interval;
+            float p_vel_x = -f.x/t_interval;
+            float p_vel =  sqrt(pow(p_vel_y, 2) + pow(p_vel_x, 2));
+            dest_row[col] = p_vel;
+            velocity.push_back(p_vel); 
+        }    	
+    }
+    const string winName = "FlowMat";
+    const float MAX = *max_element(velocity.begin(), velocity.end());
+    const float MIN = *min_element(velocity.begin(), velocity.end());
+    const float MEAN = std::accumulate(velocity.begin(), velocity.end(), 0.0) / velocity.size();
+    
+    std::cout << flows.size( ) << std::endl;
+    std::cout << "max: " << MAX << ", min: " << MIN << ", mean: " << MEAN;     
+    cv::Mat ImThreshold;
+    cv::threshold(VelMat, ImThreshold, MEAN, 255, CV_THRESH_BINARY);
+    
+    ImThreshold.convertTo(ImThreshold, CV_8U);
+    cv::imshow(winName, ImThreshold);
+    velocity.clear();
+ 
+    return ImThreshold;
+}
 
-cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float confThreshold, float maskThreshold){
+cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float confThreshold, float maskThreshold, bool useOptical, cv::InputArray imTh)
+{
     std::vector<std::string> classes; // classId --> className
     std::unordered_set<std::string> dynamicClasses; // name of dynamic classes
     cv::dnn::Net net; // mask-rcnn model
     
     // define inference parameter
-    std::string strModelPath = "/home/park/ORB_SLAM/myslam2/ORB_SLAM2/Examples/MaskRcnn/pretrained/";                                                                                                        
-    std::string textGraph = strModelPath + "mask_rcnn_inception_v2_coco_2018_01_28.pbtxt";
-    std::string modelWeights = strModelPath +  "mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb";
-    std::string classesFile = strModelPath + "mscoco_labels.names";
-    std::string dynamicClassFile = strModelPath + "dynamic.names";
+    const std::string strModelPath = "/home/park/ORB_SLAM/myslam2/ORB_SLAM2/Examples/MaskRcnn/pretrained/";                                                                                                        
+    const std::string textGraph = strModelPath + "mask_rcnn_inception_v2_coco_2018_01_28.pbtxt";
+    const std::string modelWeights = strModelPath +  "mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb";
+    const std::string classesFile = strModelPath + "mscoco_labels.names";
+    const std::string dynamicClassFile = strModelPath + "dynamic.names";
 
     // Load names of classes
     std::ifstream ifs(classesFile.c_str());
@@ -299,6 +349,9 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
     // dynamic part should be zero
     dynamic_mask = cv::Mat(im.size(), CV_8U, cv::Scalar(255));
     cv::Mat mat_zeros = cv::Mat::zeros(im.size(), CV_8U);
+    cv::Mat And_result;
+    cv::Mat Or_result;
+
     for (int i = 0; i < numDetections; ++i) {
         float score = outDetections.at<float>(i, 2);
         if (score > confThreshold) {
@@ -322,30 +375,71 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
             // Extract the mask for the object
             cv::Mat objectMask(outMasks.size[2], outMasks.size[3], CV_32F, outMasks.ptr<float>(i, classId));
             
-            // Resize the mask, threshold, color and apply it on the image
-            
+            // Resize the mask, threshold, color and apply it on the image 
             cv::resize(objectMask, objectMask, cv::Size(box.width, box.height));
+
             // threshold mask into binary 255/0 
             cv::Mat mask = (objectMask > maskThreshold);
             mask.convertTo(mask, CV_8U);
 
-            if (dynamicClasses.count(classes[classId])) {
+            if(useOptical==true)
+            {
+                // cv::imshow("mask roi", mask);
+                // cv::imshow("threshold roi", imTh(box));
+                // std::cout<< "mask size: "<<mask.size() << ", Imth roi size: "<< imTh(box).size()<<std::endl;
+                cv::Mat ImTh = imTh.getMat();
+                cv::bitwise_and(mask, ImTh(box), And_result);
+                cv::bitwise_or(mask, ImTh(box), Or_result);
+                And_result.convertTo(And_result, CV_8U);
+                Or_result.convertTo(Or_result, CV_8U);
+                
+                float IOU = cv::sum(And_result)[0] / cv::sum(Or_result)[0];
+
+                // cv::imshow("bitwise and", And_result);
+                // cv::imshow("bitwise or", Or_result);
+                // std::cout<< "and size: "<< cv::sum(And_result) << ", or size: "<< cv::sum(Or_result)<<std::endl;
+
+                if (dynamicClasses.count(classes[classId])) {
+                    // copy ones into the corresponding mask region
+                    if(IOU>0.6)
+                    {
+                        mat_zeros(box).copyTo(dynamic_mask(box), mask);
+                    }
+                }
+            }
+            else
+            {
+                if (dynamicClasses.count(classes[classId]))
+                {
                 // copy ones into the corresponding mask region
-                mat_zeros(box).copyTo(dynamic_mask(box), mask);
+                    mat_zeros(box).copyTo(dynamic_mask(box), mask);  
+                }
             }
         }
     }
 
-    dynamic_mask;
-
-    frame_num++;
-    string write_path ="/home/park/ORB_SLAM/myslam2/kitti03_mask/masking";
-    write_path += to_string(frame_num);
-    write_path += ".png";
-    cout << write_path << endl;
-    cv::imwrite(write_path, dynamic_mask);
+    // dynamic_mask;
+    // frame_num++;
+    // string write_path ="/home/park/ORB_SLAM/myslam2/kitti03_mask/masking";
+    // write_path += to_string(frame_num);
+    // write_path += ".png";
+    // cout << write_path << endl;
+    // cv::imwrite(write_path, dynamic_mask);
+    cv::imshow("dynamic mask", dynamic_mask);
     return dynamic_mask;
 }
+
+
+void Frame::ExtractORB_flow(int flag, const cv::Mat &im, const cv::Mat &imTh)
+{
+    cv::Mat mask = cv::Mat(im.size(), CV_8U, cv::Scalar(255));    
+    if(flag==0){
+        mask = DynamicExtract(im, mask,0.5,0.3, true, imTh);
+        (*mpORBextractorLeft)(im,mask,mvKeys,mDescriptors);}
+    else{
+        mask = DynamicExtract(im, mask,0.5,0.3, true, imTh);    
+        (*mpORBextractorRight)(im,mask,mvKeysRight,mDescriptorsRight);}
+ }
 
 //////////////// masking ///////////////////////////
 void Frame::ExtractORB(int flag, const cv::Mat &im)

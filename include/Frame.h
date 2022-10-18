@@ -72,10 +72,16 @@ public:
     // Constructor for Monocular cameras.
     Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
 
-    cv::Mat DynamicExtract(const cv::Mat &im, cv::Mat &mask,float confThreshold, float maskThreshold);
+    // Optical flow
+    cv::Mat OpticalFlow(const cv::Mat &im, cv::Mat &prev, int cnt);
+    
+    // Mask-Rcnn
+    cv::Mat DynamicExtract(const cv::Mat &im, cv::Mat &mask,float confThreshold, float maskThreshold, bool useOptical = false, cv::InputArray imTh = cv::noArray());
 
     // Extract ORB on the image. 0 for left image and 1 for right image.
     void ExtractORB(int flag, const cv::Mat &im);
+
+    void ExtractORB_flow(int flag, const cv::Mat &im, const cv::Mat &imTh);
 
     // Compute Bag of Words representation.
     void ComputeBoW();
