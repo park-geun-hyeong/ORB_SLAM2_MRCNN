@@ -37,6 +37,7 @@
 #include "Initializer.h"
 #include "MapDrawer.h"
 #include "System.h"
+#include <cmath>
 
 #include <mutex>
 
@@ -92,6 +93,15 @@ public:
     // Input sensor
     int mSensor;
 
+    // optical flow(Farneback)
+    int cnt = 0;
+    const float t_interval = 0.1;
+    cv::Mat prvs;
+    cv::Mat flows;
+    cv::UMat flowMat;
+    std::vector<float> velocity; 
+    cv::Mat prev_to_current_relation = cv::Mat::eye(4,4,CV_32F);   
+    
     // Current Frame
     Frame mCurrentFrame;
     cv::Mat mImGray;

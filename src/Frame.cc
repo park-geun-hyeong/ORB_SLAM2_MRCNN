@@ -31,6 +31,8 @@ bool Frame::mbInitialComputations=true;
 float Frame::cx, Frame::cy, Frame::fx, Frame::fy, Frame::invfx, Frame::invfy;
 float Frame::mnMinX, Frame::mnMinY, Frame::mnMaxX, Frame::mnMaxY;
 float Frame::mfGridElementWidthInv, Frame::mfGridElementHeightInv;
+
+// optical flow
 int cnt = 0;
 cv::Mat prvs;
 cv::Mat flows;
@@ -177,7 +179,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 }
 
 
-Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, cv::InputArray ex, bool useOptical)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
 {
@@ -194,15 +196,25 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
-    if(cnt == 0)
-    {
-        prvs = imGray;
-    }
-    cv::Mat imTh = OpticalFlow(imGray, prvs, cnt);
-    ExtractORB_flow(0,imGray, imTh);
-    cnt+=1;
-    prvs = imGray;
+    // if(cnt == 0)
+    // {
+    //     prvs = imGray;
+    // }
+    // cv::Mat imTh = OpticalFlow(imGray, prvs, cnt);
+    // ExtractORB_flow(0,imGray, imTh);
+    // cnt+=1;
+    // prvs = imGray;
 
+    if(useOptical == true)
+    {
+        cv::Mat imTh = ex.getMat();
+        ExtractORB_flow(0,imGray,imTh);
+    }
+    else
+    {
+        ExtractORB(0,imGray);
+    }
+    
     N = mvKeys.size();
 
     if(mvKeys.empty())
@@ -375,6 +387,8 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
             // Extract the mask for the object
             cv::Mat objectMask(outMasks.size[2], outMasks.size[3], CV_32F, outMasks.ptr<float>(i, classId));
             
+            cv::imshow("Ordinal feature map", objectMask);
+
             // Resize the mask, threshold, color and apply it on the image 
             cv::resize(objectMask, objectMask, cv::Size(box.width, box.height));
 
@@ -382,26 +396,33 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
             cv::Mat mask = (objectMask > maskThreshold);
             mask.convertTo(mask, CV_8U);
 
+            cv::imshow("rescale & binarization mask", mask);
+
             if(useOptical==true)
             {
                 // cv::imshow("mask roi", mask);
                 // cv::imshow("threshold roi", imTh(box));
                 // std::cout<< "mask size: "<<mask.size() << ", Imth roi size: "<< imTh(box).size()<<std::endl;
                 cv::Mat ImTh = imTh.getMat();
+
+                cv::imshow("imth ROI", ImTh(box));
+    
                 cv::bitwise_and(mask, ImTh(box), And_result);
                 cv::bitwise_or(mask, ImTh(box), Or_result);
                 And_result.convertTo(And_result, CV_8U);
                 Or_result.convertTo(Or_result, CV_8U);
                 
-                float IOU = cv::sum(And_result)[0] / cv::sum(Or_result)[0];
+                float IOU = cv::sum(And_result)[0] / cv::sum(ImTh(box))[0];
+                std::cout<< "IOU: " << IOU << std::endl;
 
-                // cv::imshow("bitwise and", And_result);
-                // cv::imshow("bitwise or", Or_result);
+                cv::imshow("bitwise and", And_result);
+                cv::imshow("bitwise or", Or_result);
                 // std::cout<< "and size: "<< cv::sum(And_result) << ", or size: "<< cv::sum(Or_result)<<std::endl;
-
+                
+                // flow map이 전부 255일 경우 추가해주기
                 if (dynamicClasses.count(classes[classId])) {
                     // copy ones into the corresponding mask region
-                    if(IOU>0.6)
+                    if(IOU>0.7)
                     {
                         mat_zeros(box).copyTo(dynamic_mask(box), mask);
                     }
@@ -411,7 +432,7 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
             {
                 if (dynamicClasses.count(classes[classId]))
                 {
-                // copy ones into the corresponding mask region
+                    // copy ones into the corresponding mask region
                     mat_zeros(box).copyTo(dynamic_mask(box), mask);  
                 }
             }
@@ -419,13 +440,14 @@ cv::Mat Frame::DynamicExtract(const cv::Mat &im, cv::Mat &dynamic_mask, float co
     }
 
     // dynamic_mask;
-    // frame_num++;
-    // string write_path ="/home/park/ORB_SLAM/myslam2/kitti03_mask/masking";
+    frame_num++;
+    // string write_path ="/home/park/masking/masking";
     // write_path += to_string(frame_num);
     // write_path += ".png";
     // cout << write_path << endl;
     // cv::imwrite(write_path, dynamic_mask);
     cv::imshow("dynamic mask", dynamic_mask);
+    std::cout<<"dynamic_mask : "<<frame_num<<std::endl;
     return dynamic_mask;
 }
 

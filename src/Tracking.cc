@@ -252,13 +252,121 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
             cvtColor(mImGray,mImGray,CV_BGRA2GRAY);
     }
 
+    cnt += 1;
+    float fx = mK.at<float>(0,0);
+    float fy = mK.at<float>(1,1);
+    float cx = mK.at<float>(0,2);
+    float cy = mK.at<float>(1,2);
+    float Z = 1;
+    float th = 0.02;
+    cv::Mat Pixel_world_coord(3,1,CV_32FC1);
+    cv::Mat Pixel_move_flow(3,1,CV_32FC1);
+    cv::Mat Pixel_move_cameraMotion;
+
+    if(!mVelocity.empty())
+    {
+        mVelocity.rowRange(0,3).colRange(0,3).copyTo(prev_to_current_relation.rowRange(0,3).colRange(0,3));
+        mVelocity.rowRange(0,3).col(3).copyTo(prev_to_current_relation.rowRange(0,3).col(3));
+    }
+
+    cv::Mat Rotation = prev_to_current_relation.rowRange(0,3).colRange(0,3);
+    cv::Mat Translation = prev_to_current_relation.rowRange(0,3).col(3);
+    
     if(mState==NOT_INITIALIZED || mState==NO_IMAGES_YET)
         mCurrentFrame = Frame(mImGray,timestamp,mpIniORBextractor,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
     else
-        mCurrentFrame = Frame(mImGray,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
+    {
+        // optical flow(from current to previous)
+        calcOpticalFlowFarneback(prvs, mImGray, flowMat, 0.5, 3, 15, 3, 5, 1.2, 0);
+        flowMat.copyTo(flows);
+        cv::Mat VelMat = cv::Mat::zeros(mImGray.rows, mImGray.cols, CV_32FC1);
+        std::cout << "\n========== [" << cnt << "] ==========" << std::endl;
+        for(int row = 0 ; row<flows.rows ; row++)
+        {
+		    cv::Point2f* pointer_row = flows.ptr<cv::Point2f>(row);
+            float* dest_row = VelMat.ptr<float>(row);
+            for(int col = 0 ; col<flows.cols; col++)
+            {   
+                cv::Point2f f = pointer_row[col];
+
+                // From 2D pixel coordinate to 3D World coordinate
+                Pixel_world_coord.at<float>(0,0) = (col-cx)/fx*Z;
+                Pixel_world_coord.at<float>(1,0) = (row-cy)/fy*Z;
+                Pixel_world_coord.at<float>(2,0) = Z;
+                
+                // float flow_world_x = (f.x-cx)/fx*Z;
+                // float flow_world_y = (f.y-cy)/fy*Z;
+                // float flow_world_z = Z;
+                
+                // Estimate prev 3D world coordinate using camera motion
+                Pixel_move_cameraMotion = Rotation.t()*Pixel_world_coord - Rotation.t()*Translation;
+                // Pixel_move_flow.at<float>(0,0) = Pixel_world_coord.at<float>(0,0) + flow_world_x;
+                // Pixel_move_flow.at<float>(1,0) = Pixel_world_coord.at<float>(1,0) + flow_world_y;
+                // Pixel_move_flow.at<float>(2,0) = Pixel_world_coord.at<float>(2,0);
+                
+                // Estimate prev 3D world coordinate using optical flow
+                Pixel_move_flow.at<float>(0,0) = (col+f.x-cx)/fx*Z;
+                Pixel_move_flow.at<float>(1,0) = (row+f.y-cy)/fy*Z;
+                Pixel_move_flow.at<float>(2,0) = Z;
+
+                // Compare each other
+                float x_diff = Pixel_move_cameraMotion.at<float>(0,0) - Pixel_move_flow.at<float>(0,0);
+                float y_diff = Pixel_move_cameraMotion.at<float>(0,1) - Pixel_move_flow.at<float>(0,1);
+
+                x_diff = x_diff>=0?x_diff:-x_diff;
+                y_diff = y_diff>=0?y_diff:-y_diff;
+
+                // Make Dynamic pixel
+                float dynamic = (x_diff+y_diff)/2>th?255:0;
+                dest_row[col] = dynamic;
+                if(row==flows.rows/2 && col%50 == 0)
+                {   
+                    std::cout<<"row: "<< row << ",col: "<< col <<", x_diff: " << x_diff << ", y_diff: "<< y_diff<< ", mean: " << (x_diff+y_diff)/2 << ", dynamic: "<< dynamic<< std::endl;
+                }
+                
+                // std::cout << (-f.x-cx)/fx << ", " << (-f.y-cy)/fy<<std::endl;
+                // float p_vel_y = -f.y/t_interval;
+                // float p_vel_x = -f.x/t_interval;
+                // float p_vel =  sqrt(pow(p_vel_y, 2) + pow(p_vel_x, 2));
+                // dest_row[col] = p_vel;
+                // velocity.push_back(p_vel); 
+            }    	
+		}
+
+        // const float MAX = *max_element(velocity.begin(), velocity.end());
+        // const float MIN = *min_element(velocity.begin(), velocity.end());
+        // const float MEAN = std::accumulate(velocity.begin(), velocity.end(), 0.0) / velocity.size();
+        
+        // std::cout << flows.size( ) << std::endl;
+        // std::cout << "max: " << MAX << ", min: " << MIN << ", mean: " << MEAN;     
+        // cv::Mat ImThreshold;
+        // cv::threshold(VelMat, ImThreshold, MEAN, 255, CV_THRESH_BINARY_INV);
+        // ImThreshold.convertTo(ImThreshold, CV_8U);
+
+        VelMat.convertTo(VelMat, CV_8U);
+        // string write_path ="/home/park/flow_masking/flow_masking";
+        // write_path += to_string(cnt);
+        // write_path += ".png";
+        // cout << write_path << endl;
+        // cv::imwrite(write_path, VelMat);
+        cv::imshow("FlowMat", VelMat);
+        // velocity.clear();
+        mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,VelMat,true);
+    }
 
     Track();
 
+    prvs = mImGray;
+    std::cout<< "\nmTcw" << std::endl;
+    for(int i=0; i<mCurrentFrame.mTcw.rows; i++)
+    {
+        for(int j=0; j<mCurrentFrame.mTcw.cols; j++)
+        {
+            std::cout << mCurrentFrame.mTcw.at<float>(i, j) << " ";
+        }
+        std::cout<<"\n";
+    }
+    
     return mCurrentFrame.mTcw.clone();
 }
 
@@ -502,7 +610,6 @@ void Tracking::Track()
     }
 
 }
-
 
 void Tracking::StereoInitialization()
 {
@@ -751,7 +858,6 @@ void Tracking::CheckReplacedInLastFrame()
     }
 }
 
-
 bool Tracking::TrackReferenceKeyFrame()
 {
     // Compute Bag of Words vector
@@ -869,7 +975,6 @@ bool Tracking::TrackWithMotionModel()
     // Update last frame pose according to its reference keyframe
     // Create "visual odometry" points if in Localization Mode
     UpdateLastFrame();
-
     mCurrentFrame.SetPose(mVelocity*mLastFrame.mTcw);
 
     fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
